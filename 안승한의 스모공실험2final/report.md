@@ -53,6 +53,7 @@ HGB의 target은 최종 위치 자체가 아니라 Huber IRWLS의 위치 오차�
 HGB 입력으로는 calibrated RTT 거리 외에도, 2차 개선단계의 Huber IRWLS에서 생성된 residual, weight, predicted distance, residual 통계량을 함께 사용하였다. 이를 통해 HGB가 단순 거리-좌표 관계뿐만 아니라 현재 추정 결과가 어떤 앵커에서 불안정한지도 학습하도록 하였다.
 
 | Feature | 개수 | 의미 |
+|---|---:|---|
 | Raw RTT distance | 18 | 원본 RTT 거리값 |
 | Calibrated RTT distance | 18 | 앵커별 bias가 제거된 거리값 |
 | Huber initial position | 2 | Huber IRWLS로 얻은 초기 x, y 위치 |
@@ -87,6 +88,7 @@ Chat GPT를 사용하였으며, 본 프로젝트의 실험단계인 앵커별 �
 동일한 validation split을 사용하여 단계별 성능을 비교하였다.
 
 | Method | MAE (m) | RMSE (m) | Median Error (m) | 90% Error (m) | Max Error (m) |
+|---|---:|---:|---:|---:|---:|
 | Raw LS | 22.186 | 23.724 | 20.023 | 31.855 | 64.314 |
 | Anchor-wise Calibrated LS | 9.554 | 11.986 | 7.764 | 17.804 | 63.214 |
 | Calibrated + Huber IRWLS | 8.431 | 9.738 | 7.560 | 14.747 | 26.141 |
@@ -101,6 +103,7 @@ Raw LS는 앵커별 거리 bias와 outlier를 별도로 고려하지 않기 때�
 최종 AC-HGBoost-Gate 모델은 baseline 대비 모든 주요 지표에서 큰 오차 감소를 보였다.
 
 | Metric | Baseline | Final AC-HGBoost-Gate | Reduction |
+|---|---:|---:|---:|
 | MAE | 22.186 m | 5.810 m | 73.8% |
 | RMSE | 23.724 m | 7.244 m | 69.5% |
 | Median Error | 20.023 m | 4.886 m | 75.6% |
