@@ -14,6 +14,7 @@ Tukey 방식과 Huber 방식을 비교하였고 그 결과 Huber 방식의 성�
 RandomForest, ExtraTrees 방식에 대해 처음부터 머신러닝만 쓰는 방식과 Calibrate + IRWLS를 적용한 2차버전의 결과에 남은 잔차를 보정하는 용도로 쓰는 방식 총 4가지를 수행하였고, 이 결과 처음부터 머신러닝만 쓰는 방식은 결과가 좋지 않았다.
 
 마지막으로, 더 개선할 방법을 찾아보던 중 HistGradientBoosting 방법에 Confidence Gate를 결합하면, Huber IRWLS 결과의 신뢰도에 따라 보정 강도를 조절할 수 있다는 사실을 알아냈다. Boosting 계통 방법은 이전 tree가 설명하지 못한 오차를 다음 tree가 보정하는 방식이므로 IRWLS 이후 남아있는 위치 잔차를 단계적으로 줄이는 데 효과가 있을 것 같아 이를 최종적으로 선택했다.
+ 실제 성능은 RandomForest를 사용하였을 때가 MAE 범위 0.2m 내외 선에서 더 우수하였으나, 본 방법이 더 특이하다고 생각하여 이를 최종 버전으로 선택하게 되었다.
 
 즉, 결론적으로 본 방법은 Anchor-wise Calibration + Huber 기반 IRWLS + HisGradientBoosting with Rich Feature + Gate Scale을 적용한 것이다. 
  오차를 한 번에 해결하려 하지 않고, 오차 원인을 단계별로 분리하여 처리하였으며 최종 알고리즘은 `AC-HGBoost-Gate`로 정의하였다. 이는 `Anchor-wise Calibrated Huber-initialized Rich Feature Gated HistGradientBoosting`의 약자이다.
