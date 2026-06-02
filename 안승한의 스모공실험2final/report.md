@@ -131,19 +131,60 @@ AC-HGBoost-Gate의 장점은 물리 기반 추정과 boosting 기반 residual �
  
 대신 본 방법은 RandomForest에 비해 Median Error와 90% Error에 대해 더 우수한 결과를 냈으므로 구현난이도나 코드의 무게를 제외한다면 무조건 나쁘다고 할 수는 없는 방법이다. 무엇보다도 독창적이라고 생각한다.
 
+
 ## 5. Reference
 
-본 프로젝트는 수업에서 진행한 LS, WLS, robust weighting 기반 위치 추정 개념과 제공 데이터에 대한 자체 validation 실험을 기반으로 작성하였으며, 최종 알고리즘과 모델 선택은 제공 데이터에서 수행한 validation 결과를 기준으로 결정하였다.
- 추가적으로 참고한 자료는 다음과 같다.
+본 프로젝트는 제공 데이터에 대한 자체 validation 실험을 기반으로 알고리즘을 설계하였다. 아래 자료들은 본 알고리즘의 이론적 배경과 구현 방식의 참고 자료로 사용하였으며, 최종 모델 구조와 parameter 선택은 제공 데이터에서 수행한 validation 결과를 기준으로 직접 결정하였다.
 
-[1] P. J. Huber, “Robust Estimation of a Location Parameter,” The Annals of Mathematical Statistics, vol. 35, no. 1, pp. 73–101, 1964.
-본 프로젝트의 Huber IRWLS 단계에서 residual이 큰 앵커의 영향을 완화하는 robust weighting 개념을 설명하기 위한 이론적 배경으로 참고하였다. Huber의 robust estimation은 이상치에 의해 추정값이 과도하게 흔들리는 문제를 줄이는 대표적인 방법이다.
+### 5.1 P. J. Huber (1964), Robust Estimation of a Location Parameter
 
-[2] J. H. Friedman, “Greedy Function Approximation: A Gradient Boosting Machine,” The Annals of Statistics, vol. 29, no. 5, pp. 1189–1232, 2001.
-본 프로젝트의 Rich Feature HGB residual correction 단계에서 사용한 boosting 기반 순차적 residual 보정 개념의 배경으로 참고하였다. Gradient boosting은 이전 모델이 설명하지 못한 오차를 다음 모델이 단계적으로 보정하는 방식이므로, Huber IRWLS 이후 남은 위치 residual을 줄이는 구조와 연결된다.
+참고한 내용
 
-[3] Scikit-learn developers, “HistGradientBoostingRegressor,” scikit-learn documentation.
-최종 모델의 HGB 구현은 scikit-learn의 HistGradientBoostingRegressor를 기반으로 하였다. 본 프로젝트에서는 해당 모델을 직접 위치를 예측하는 black-box로 사용하지 않고, p_true - p_huber residual을 예측하는 보정기로 사용하였다.
+- 이상치가 포함된 데이터에서 일반 LS보다 robust estimation이 안정적일 수 있다는 점.
+- 작은 residual은 그대로 사용하고, 큰 residual은 영향력을 줄이는 Huber weighting 개념.
+- 본 프로젝트의 Huber IRWLS에서 threshold `c = 1.345`를 사용하는 이론적 배경.
 
-[4] K. Kosek-Szott, S. Szott, W. Ciezobka, M. Wojnara, K. Rusek, and J. Segev, “Indoor Positioning with Wi-Fi Location: A Survey of IEEE 802.11mc/az/bk Fine Timing Measurement Research,” 2025.
-Wi-Fi RTT/FTM 기반 실내측위의 전반적인 배경과 RTT 거리 측정 기반 위치 추정 문제를 이해하기 위한 참고 자료로 사용하였다. 본 프로젝트는 제공된 Wi-Fi RTT 거리 측정값을 이용해 실내 위치를 추정하는 문제이므로, 해당 survey는 기술적 배경을 설명하는 데 관련된다.
+내가 실제 구현한 부분
+
+- 제공된 RTT 거리값에 대해 각 앵커 residual을 계산하였다.
+- MAD 기반 robust scale을 사용하여 residual을 표준화하였다.
+- Huber weight를 반복적으로 갱신하는 IRWLS 구조를 직접 구성하여, 큰 residual을 가진 앵커의 영향이 줄어들도록 하였다.
+
+### 5.2 J. H. Friedman (2001), Greedy Function Approximation: A Gradient Boosting Machine
+
+참고한 내용
+
+- Gradient boosting은 이전 단계 모델이 설명하지 못한 residual을 다음 tree가 순차적으로 보정하는 방식이라는 점.
+- Residual을 직접 학습하는 방식이 단순한 black-box 회귀보다 위치 보정 문제에 적합할 수 있다는 점.
+
+내가 실제 구현한 부분
+
+- HGB를 처음부터 위치를 예측하는 모델로 사용하지 않았다.
+- Huber IRWLS로 얻은 초기 위치 `p_huber`를 기준으로, `p_true - p_huber` residual을 HGB의 target으로 설정하였다.
+- 최종 위치는 `p_final = p_huber + 1.1 × delta_HGB` 형태로 계산하였다.
+
+### 5.3 K. Kosek-Szott et al. (2025), Indoor Positioning with Wi-Fi Location: A Survey of IEEE 802.11mc/az/bk Fine Timing Measurement Research
+
+참고한 내용
+
+- Wi-Fi RTT/FTM 기반 실내측위에서는 실내 multipath, NLOS, 앵커 환경 차이로 인해 거리 측정 오차가 커질 수 있다는 점.
+- Wi-Fi FTM 기반 거리 측정은 실내 위치 추정에 활용될 수 있지만, 측정 오차 보정이 중요하다는 점.
+
+내가 실제 구현한 부분
+
+- IEEE 802.11mc/az/bk 프로토콜이나 FTM 측정 과정을 직접 구현하지는 않았다.
+- 제공된 `d_hat` 거리 측정값과 앵커 위치만 사용하였다.
+- 앵커별 평균 bias를 보정하는 Anchor-wise Calibration과 Huber IRWLS, HGB residual correction을 결합하여 데이터 기반 위치 보정 파이프라인을 구성하였다.
+
+### 5.4 scikit-learn HistGradientBoostingRegressor documentation
+
+참고한 내용
+
+- `HistGradientBoostingRegressor`의 주요 parameter인 `learning_rate`, `max_iter`, `max_leaf_nodes`, `min_samples_leaf`, `l2_regularization`의 의미.
+- 해당 모델이 regression 문제에 사용할 수 있는 histogram-based gradient boosting 모델이라는 점.
+
+내가 실제 구현한 부분
+
+- 최종 모델에는 `learning_rate=0.02`, `max_iter=500`, `max_leaf_nodes=31`, `min_samples_leaf=10`, `l2_regularization=2.0`을 적용하였다.
+- HGB 입력 feature로 raw distance, calibrated distance, Huber position, residual, absolute residual, residual ratio, Huber weight, predicted distance, residual/weight statistics를 구성하였다.
+- HGB를 단독 위치 예측기가 아니라 rich feature 기반 residual correction 모델로 사용하였다.
